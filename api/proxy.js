@@ -1,38 +1,38 @@
 const https = require('https');
 const http = require('http');
-const { URL } = require('url');
 
 module.exports = async (req, res) => {
-  // 目标IPTV服务器
   const target = 'http://line.din-ott.com';
-
-  // 解析原始请求的路径与查询
-  // 获取类似 /proxy/player_api.php?username=xxx&password=xxx&action=xxx
-  const { url, headers, method } = req;
-  // 只保留 /proxy/ 后面的部分
-  const proxyPath = url.replace(/^\/api\/proxy/, '');
-
-  // 构造目标URL
+  const proxyPath = req.url.replace(/^\/api\/proxy/, '');
   const targetUrl = target + proxyPath;
-
-  // 选择http或https
   const lib = targetUrl.startsWith('https') ? https : http;
 
-  // 发起代理请求
+  // 打印目标URL用于调试
+  console.log('Proxying to:', targetUrl);
+
   const proxyReq = lib.request(targetUrl, {
-    method,
-    headers
+    method: req.method,
+    headers: req.headers
   }, proxyRes => {
-    res.writeHead(proxyRes.statusCode, proxyRes.headers);
-    proxyRes.pipe(res, { end: true });
+    console.log('Status from target:', proxyRes.statusCode);
+
+    let body = '';
+    proxyRes.on('data', chunk => body += chunk);
+    proxyRes.on('end', () => {
+      // 打印响应内容长度和内容
+      console.log('Response length:', body.length);
+      console.log('Response body:', body);
+
+      res.writeHead(proxyRes.statusCode, proxyRes.headers);
+      res.end(body);
+    });
   });
 
-  // 错误处理
   proxyReq.on('error', (err) => {
+    console.error('Proxy error:', err);
     res.statusCode = 500;
     res.end('Proxy error: ' + err.message);
   });
 
-  // pipe原请求体（如有）
   req.pipe(proxyReq, { end: true });
 };
