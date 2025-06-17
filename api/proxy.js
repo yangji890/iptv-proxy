@@ -2,17 +2,29 @@ const https = require('https');
 const http = require('http');
 
 module.exports = async (req, res) => {
+  // 处理 CORS 预检请求
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.setHeader('Access-Control-Max-Age', '86400');
+    res.statusCode = 204;
+    res.end();
+    return;
+  }
+
   const target = 'http://line.din-ott.com';
-  // 修正：去除 /api/proxy 和 /proxy 前缀，只保留 /player_api.php...
+  // 修正路径拼接
   const proxyPath = req.url.replace(/^\/api\/proxy/, '').replace(/^\/proxy/, '');
   const targetUrl = target + proxyPath;
   const lib = targetUrl.startsWith('https') ? https : http;
 
-  // CORS 允许跨域，兼容 Web 客户端
+  // 设置 CORS 响应头
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Headers', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Max-Age', '86400');
 
-  // 调试日志
   console.log('Proxying to:', targetUrl);
 
   const proxyReq = lib.request(targetUrl, {
@@ -25,9 +37,6 @@ module.exports = async (req, res) => {
     proxyRes.on('data', chunk => body += chunk);
     proxyRes.on('end', () => {
       console.log('Response length:', body.length);
-      // 为了调试，也可打印 body
-      // console.log('Response body:', body);
-
       res.writeHead(proxyRes.statusCode, proxyRes.headers);
       res.end(body);
     });
