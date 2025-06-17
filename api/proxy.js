@@ -8,6 +8,10 @@ module.exports = async (req, res) => {
   const targetUrl = target + proxyPath;
   const lib = targetUrl.startsWith('https') ? https : http;
 
+  // CORS 允许跨域，兼容 Web 客户端
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', '*');
+
   // 调试日志
   console.log('Proxying to:', targetUrl);
 
@@ -21,7 +25,8 @@ module.exports = async (req, res) => {
     proxyRes.on('data', chunk => body += chunk);
     proxyRes.on('end', () => {
       console.log('Response length:', body.length);
-      console.log('Response body:', body);
+      // 为了调试，也可打印 body
+      // console.log('Response body:', body);
 
       res.writeHead(proxyRes.statusCode, proxyRes.headers);
       res.end(body);
