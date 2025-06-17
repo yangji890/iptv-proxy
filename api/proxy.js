@@ -3,11 +3,12 @@ const http = require('http');
 
 module.exports = async (req, res) => {
   const target = 'http://line.din-ott.com';
-  const proxyPath = req.url.replace(/^\/api\/proxy/, '');
+  // 修正：去除 /api/proxy 和 /proxy 前缀，只保留 /player_api.php...
+  const proxyPath = req.url.replace(/^\/api\/proxy/, '').replace(/^\/proxy/, '');
   const targetUrl = target + proxyPath;
   const lib = targetUrl.startsWith('https') ? https : http;
 
-  // 打印目标URL用于调试
+  // 调试日志
   console.log('Proxying to:', targetUrl);
 
   const proxyReq = lib.request(targetUrl, {
@@ -19,7 +20,6 @@ module.exports = async (req, res) => {
     let body = '';
     proxyRes.on('data', chunk => body += chunk);
     proxyRes.on('end', () => {
-      // 打印响应内容长度和内容
       console.log('Response length:', body.length);
       console.log('Response body:', body);
 
